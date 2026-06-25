@@ -7,11 +7,15 @@
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <style>
+    .screen { display: none; }
+    .screen.active { display: block; }
+  </style>
 </head>
 <body class="bg-[#F8F9FA] max-w-md mx-auto">
 
   <!-- PANTALLA 1: INICIO -->
-  <div id="screen-home" class="screen">
+  <div id="screen-home" class="screen active">
     <div class="relative h-[280px]">
       <img src="https://picsum.photos/id/292/1200/800" class="w-full h-full object-cover">
       <div class="absolute inset-0 bg-gradient-to-b from-black/25 to-black/65"></div>
@@ -34,14 +38,14 @@
       </div>
 
       <div class="space-y-4">
-        <button onclick="showScreen('screen-preferences')"
+        <button id="btn-recomendaciones"
                 class="w-full bg-[#FF3B30] hover:bg-[#E62E26] text-white font-bold text-xl py-6 rounded-3xl shadow-lg active:scale-[0.985]">
           <i class="fa-solid fa-magic mr-2"></i>
           ¿No sabes qué pedir?<br>
           <span class="text-base font-medium">Recomendaciones con IA</span>
         </button>
 
-        <button onclick="showScreen('screen-menu')"
+        <button id="btn-menu"
                 class="w-full bg-white border border-gray-200 hover:bg-gray-50 text-gray-800 font-semibold text-xl py-6 rounded-3xl active:scale-[0.985]">
           Explorar el menú completo
         </button>
@@ -50,9 +54,9 @@
   </div>
 
   <!-- PANTALLA 2: PREFERENCIAS -->
-  <div id="screen-preferences" class="screen hidden p-6">
+  <div id="screen-preferences" class="screen p-6">
     <div class="flex items-center gap-3 mb-6">
-      <button onclick="showScreen('screen-home')" class="text-2xl">←</button>
+      <button id="btn-back-preferences" class="text-2xl">←</button>
       <h2 class="text-2xl font-bold">Cuéntanos tus preferencias</h2>
     </div>
 
@@ -63,36 +67,37 @@
       <textarea id="extra-text" rows="2" class="w-full border border-gray-300 rounded-2xl p-4 text-sm" placeholder="Ej: Quiero algo abundante..."></textarea>
     </div>
 
-    <button onclick="getRecommendations()" class="w-full bg-[#FF3B30] text-white font-bold py-5 rounded-3xl text-xl">
+    <button id="btn-get-recommendations"
+            class="w-full bg-[#FF3B30] text-white font-bold py-5 rounded-3xl text-xl">
       Ver mis recomendaciones
     </button>
   </div>
 
   <!-- PANTALLA 3: RECOMENDACIONES -->
-  <div id="screen-results" class="screen hidden p-6">
+  <div id="screen-results" class="screen p-6">
     <div class="flex justify-between items-center mb-5">
       <h2 class="text-2xl font-bold">Tus recomendaciones</h2>
-      <button onclick="showScreen('screen-preferences')" class="text-[#FF3B30] text-sm font-medium">Cambiar</button>
+      <button id="btn-change-preferences" class="text-[#FF3B30] text-sm font-medium">Cambiar</button>
     </div>
     <div id="recommendations-list" class="space-y-4"></div>
 
     <div class="mt-8 flex gap-3">
-      <button onclick="showScreen('screen-home')" class="flex-1 border border-gray-300 text-gray-700 font-medium py-4 rounded-3xl">Volver al inicio</button>
-      <button onclick="showScreen('screen-menu')" class="flex-1 bg-[#FF3B30] text-white font-medium py-4 rounded-3xl">Ver menú completo</button>
+      <button id="btn-back-home" class="flex-1 border border-gray-300 text-gray-700 font-medium py-4 rounded-3xl">Volver al inicio</button>
+      <button id="btn-view-menu" class="flex-1 bg-[#FF3B30] text-white font-medium py-4 rounded-3xl">Ver menú completo</button>
     </div>
   </div>
 
   <!-- PANTALLA 4: MENÚ -->
-  <div id="screen-menu" class="screen hidden">
+  <div id="screen-menu" class="screen">
     <div class="sticky top-0 bg-white z-50 border-b px-4 py-4 flex items-center gap-3">
-      <button onclick="showScreen('screen-home')" class="text-2xl">←</button>
+      <button id="btn-back-menu" class="text-2xl">←</button>
       <h2 class="font-bold text-xl">Menú</h2>
     </div>
     <div class="p-4" id="menu-by-category"></div>
   </div>
 
   <script>
-    // ==================== SUPABASE (SOLO UNA VEZ) ====================
+    // ==================== SUPABASE ====================
     const SUPABASE_URL = 'https://fiiavvgxlyccvcjqwnv.supabase.co';
     const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZpaWF2dmd4bHljY3ZjanF3bnYiLCJyb2xlIjoiYW5vbiIsImlhdCI6MTc1MDg3NzI3MiwiZXhwIjoyMDY2NDUzMjcyfQ.8vK8vK8vK8vK8vK8vK8vK8vK8vK8vK8vK8vK8vK8';
 
@@ -100,29 +105,25 @@
 
     let allDishes = [];
     let allCategories = [];
+    let selectedPreferences = {};
 
     // Cargar datos desde Supabase
-    async function loadDataFromSupabase() {
+    async function loadData() {
       try {
-        const { data: categories } = await supabase
-          .from('categories')
-          .select('*')
-          .order('order', { ascending: true });
-
-        const { data: dishes } = await supabase
-          .from('dishes')
+        const { data: categories } = await supabase.from('categories').select('*').order('order');
+        const { data: dishes } = await supabase.from('dishes')
           .select('*, categories(name)')
           .eq('is_active', true);
 
         allCategories = categories || [];
         allDishes = dishes || [];
       } catch (error) {
-        console.error('Error cargando datos de Supabase:', error);
+        console.error('Error cargando datos:', error);
       }
     }
 
     // Renderizar menú por categorías
-    function renderMenuByCategory() {
+    function renderMenu() {
       const container = document.getElementById('menu-by-category');
       container.innerHTML = '';
 
@@ -131,16 +132,15 @@
         if (dishesInCategory.length === 0) return;
 
         const section = document.createElement('div');
-        section.className = `mb-8`;
         section.innerHTML = `<h3 class="font-bold text-xl mb-3 px-1">${category.name}</h3>`;
 
-        const dishesContainer = document.createElement('div');
-        dishesContainer.className = `space-y-3`;
+        const list = document.createElement('div');
+        list.className = 'space-y-3';
 
         dishesInCategory.forEach(dish => {
-          const div = document.createElement('div');
-          div.className = `bg-white border border-gray-200 rounded-2xl overflow-hidden`;
-          div.innerHTML = `
+          const card = document.createElement('div');
+          card.className = 'bg-white border border-gray-200 rounded-2xl overflow-hidden';
+          card.innerHTML = `
             ${dish.image_url ? `<img src="${dish.image_url}" class="w-full h-40 object-cover">` : ''}
             <div class="p-4">
               <div class="flex justify-between items-start">
@@ -150,87 +150,69 @@
               <p class="text-sm text-gray-600 mt-2">${dish.description || ''}</p>
             </div>
           `;
-          dishesContainer.appendChild(div);
+          list.appendChild(card);
         });
 
-        section.appendChild(dishesContainer);
+        section.appendChild(list);
         container.appendChild(section);
       });
     }
 
-    // Preferencias
-    const preferenceOptions = [
-      { key: 'sharing', label: 'Para compartir', icon: 'fa-users' },
-      { key: 'light', label: 'Algo ligero', icon: 'fa-leaf' },
-      { key: 'meat', label: 'Prefiero carne', icon: 'fa-drumstick-bite' },
-      { key: 'chicken', label: 'Prefiero pollo', icon: 'fa-drumstick-bite' }
-    ];
-
-    let selected = {};
-
-    function renderPreferences() {
-      const container = document.getElementById('preferences-list');
-      container.innerHTML = '';
-
-      preferenceOptions.forEach(pref => {
-        const div = document.createElement('div');
-        div.className = `flex items-center gap-4 p-4 bg-white border border-gray-200 rounded-2xl cursor-pointer`;
-        div.innerHTML = `<i class="fa-solid ${pref.icon} text-[#FF3B30] text-2xl w-8"></i><span class="font-medium">${pref.label}</span>`;
-        div.onclick = () => {
-          if (selected[pref.key]) {
-            delete selected[pref.key];
-            div.classList.remove('!border-[#FF3B30]', 'bg-red-50');
-          } else {
-            selected[pref.key] = true;
-            div.classList.add('!border-[#FF3B30]', 'bg-red-50');
-          }
-        };
-        container.appendChild(div);
-      });
-    }
-
-    function getRecommendations() {
-      let filtered = [...allDishes];
-
-      if (selected.sharing) filtered = filtered.filter(d => d.good_for_sharing);
-      if (selected.light) filtered = filtered.filter(d => d.price < 15);
-      if (selected.meat) filtered = filtered.filter(d => d.main_protein?.toLowerCase().includes('carne'));
-      if (selected.chicken) filtered = filtered.filter(d => d.main_protein?.toLowerCase().includes('pollo'));
-
-      if (filtered.length === 0) filtered = allDishes;
-
-      const container = document.getElementById('recommendations-list');
-      container.innerHTML = '';
-
-      filtered.slice(0, 3).forEach(dish => {
-        const div = document.createElement('div');
-        div.className = `bg-white border border-gray-200 rounded-2xl overflow-hidden`;
-        div.innerHTML = `
-          ${dish.image_url ? `<img src="${dish.image_url}" class="w-full h-44 object-cover">` : ''}
-          <div class="p-4">
-            <div class="flex justify-between items-start">
-              <h3 class="font-bold text-xl">${dish.name}</h3>
-              <span class="font-bold text-[#FF3B30]">$${dish.price}</span>
-            </div>
-            <p class="text-sm text-gray-600 mt-2">${dish.description || ''}</p>
-          </div>
-        `;
-        container.appendChild(div);
-      });
-
-      showScreen('screen-results');
-    }
-
+    // Mostrar pantalla
     function showScreen(screenId) {
-      document.querySelectorAll('.screen').forEach(s => s.classList.add('hidden'));
-      const target = document.getElementById(screenId);
-      if (target) target.classList.remove('hidden');
+      document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+      document.getElementById(screenId).classList.add('active');
     }
 
+    // Inicializar todo
     async function init() {
-      await loadDataFromSupabase();
-      renderPreferences();
-      renderMenuByCategory();
+      await loadData();
+      renderMenu();
+
+      // Botones de la pantalla de inicio
+      document.getElementById('btn-recomendaciones').addEventListener('click', () => {
+        showScreen('screen-preferences');
+      });
+
+      document.getElementById('btn-menu').addEventListener('click', () => {
+        showScreen('screen-menu');
+      });
+
+      // Botones de navegación
+      document.getElementById('btn-back-preferences').addEventListener('click', () => showScreen('screen-home'));
+      document.getElementById('btn-back-menu').addEventListener('click', () => showScreen('screen-home'));
+      document.getElementById('btn-back-home').addEventListener('click', () => showScreen('screen-home'));
+      document.getElementById('btn-view-menu').addEventListener('click', () => showScreen('screen-menu'));
+      document.getElementById('btn-change-preferences').addEventListener('click', () => showScreen('screen-preferences'));
+
+      // Botón de recomendaciones
+      document.getElementById('btn-get-recommendations').addEventListener('click', () => {
+        // Lógica simple de recomendaciones (puedes mejorarla después)
+        const container = document.getElementById('recommendations-list');
+        container.innerHTML = '';
+
+        const filtered = allDishes.slice(0, 3); // Por ahora muestra los primeros 3
+
+        filtered.forEach(dish => {
+          const div = document.createElement('div');
+          div.className = 'bg-white border border-gray-200 rounded-2xl overflow-hidden';
+          div.innerHTML = `
+            ${dish.image_url ? `<img src="${dish.image_url}" class="w-full h-44 object-cover">` : ''}
+            <div class="p-4">
+              <div class="flex justify-between items-start">
+                <h3 class="font-bold text-xl">${dish.name}</h3>
+                <span class="font-bold text-[#FF3B30]">$${dish.price}</span>
+              </div>
+              <p class="text-sm text-gray-600 mt-2">${dish.description || ''}</p>
+            </div>
+          `;
+          container.appendChild(div);
+        });
+
+        showScreen('screen-results');
+      });
+
+      console.log('Recomendador iniciado correctamente');
     }
 
     init();
