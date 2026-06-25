@@ -90,7 +90,7 @@
   </div>
 
   <script>
-    // ==================== SUPABASE (SOLO UNA DECLARACIÓN) ====================
+    // ==================== SUPABASE (SOLO UNA VEZ) ====================
     const SUPABASE_URL = 'https://fiiavvgxlyccvcjqwnv.supabase.co';
     const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZpaWF2dmd4bHljY3ZjanF3bnYiLCJyb2xlIjoiYW5vbiIsImlhdCI6MTc1MDg3NzI3MiwiZXhwIjoyMDY2NDUzMjcyfQ.8vK8vK8vK8vK8vK8vK8vK8vK8vK8vK8vK8vK8vK8';
 
@@ -99,7 +99,6 @@
     let allDishes = [];
     let allCategories = [];
 
-    // Cargar datos
     async function loadData() {
       const { data: categories } = await supabase.from('categories').select('*').order('order');
       const { data: dishes } = await supabase.from('dishes').select('*, categories(name)').eq('is_active', true);
@@ -108,7 +107,6 @@
       allDishes = dishes || [];
     }
 
-    // Renderizar menú
     function renderMenu() {
       const container = document.getElementById('menu-by-category');
       container.innerHTML = '';
@@ -149,19 +147,20 @@
       document.getElementById(id).classList.add('active');
     }
 
-    function initButtons() {
-      // Pantalla de inicio
+    function init() {
+      loadData().then(() => {
+        renderMenu();
+      });
+
+      // Botones
       document.getElementById('btn-ai').onclick = () => showScreen('screen-preferences');
       document.getElementById('btn-menu').onclick = () => showScreen('screen-menu');
-
-      // Navegación
       document.getElementById('btn-back-pref').onclick = () => showScreen('screen-home');
       document.getElementById('btn-back-menu').onclick = () => showScreen('screen-home');
       document.getElementById('btn-home').onclick = () => showScreen('screen-home');
       document.getElementById('btn-full-menu').onclick = () => showScreen('screen-menu');
       document.getElementById('btn-change').onclick = () => showScreen('screen-preferences');
 
-      // Recomendaciones (versión simple por ahora)
       document.getElementById('btn-recommend').onclick = () => {
         const container = document.getElementById('recommendations-list');
         container.innerHTML = '';
@@ -183,13 +182,6 @@
         });
         showScreen('screen-results');
       };
-    }
-
-    async function init() {
-      await loadData();
-      renderMenu();
-      initButtons();
-      console.log('%c[Recomendador] Inicializado correctamente', 'color: green');
     }
 
     init();
