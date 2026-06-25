@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>El Poblado • Menú</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+</head>
+<body class="bg-[#F8F9FA] max-w-md mx-auto">
+
+  <!-- PANTALLA 1: INICIO -->
+  <div id="screen-home" class="screen active">
+    <div class="relative h-[280px]">
+      <img src="https://picsum.photos/id/292/1200/800" class="w-full h-full object-cover">
+      <div class="absolute inset-0 bg-gradient-to-b from-black/25 to-black/65"></div>
+      <div class="absolute bottom-0 left-0 right-0 p-6 text-white">
+        <div class="flex items-center gap-4">
+          <div class="w-14 h-14 bg-white rounded-2xl flex items-center justify-center shadow-xl">
+            <span class="text-[#FF3B30] text-3xl font-bold">EP</span>
+          </div>
+          <div>
+            <h1 class="text-4xl font-bold tracking-tight">El Poblado</h1>
+            <p class="text-lg opacity-90">Comida colombiana auténtica</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="px-6 pt-8 pb-8">
+      <div class="text-center mb-8">
+        <h2 class="text-2xl font-semibold text-gray-900">¿Qué te gustaría hacer?</h2>
+      </div>
+
+      <div class="space-y-4">
+        <button id="btn-ai" class="w-full bg-[#FF3B30] hover:bg-[#E62E26] text-white font-bold text-xl py-6 rounded-3xl shadow-lg active:scale-[0.985]">
+          <i class="fa-solid fa-magic mr-2"></i>
+          ¿No sabes qué pedir?<br>
+          <span class="text-base font-medium">Recomendaciones con IA</span>
+        </button>
+
+        <button id="btn-menu" class="w-full bg-white border border-gray-200 hover:bg-gray-50 text-gray-800 font-semibold text-xl py-6 rounded-3xl active:scale-[0.985]">
+          Explorar el menú completo
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- PANTALLA 2: PREFERENCIAS -->
+  <div id="screen-preferences" class="screen p-6">
+    <div class="flex items-center gap-3 mb-6">
+      <button id="btn-back-pref" class="text-2xl">←</button>
+      <h2 class="text-2xl font-bold">Cuéntanos tus preferencias</h2>
+    </div>
+
+    <div class="space-y-3 mb-6" id="preferences-list"></div>
+
+    <div class="mb-6">
+      <label class="block text-sm font-medium text-gray-600 mb-1.5">¿Algo más?</label>
+      <textarea id="extra-text" rows="2" class="w-full border border-gray-300 rounded-2xl p-4 text-sm" placeholder="Ej: Quiero algo abundante..."></textarea>
+    </div>
+
+    <button id="btn-recommend" class="w-full bg-[#FF3B30] text-white font-bold py-5 rounded-3xl text-xl">
+      Ver mis recomendaciones
+    </button>
+  </div>
+
+  <!-- PANTALLA 3: RECOMENDACIONES -->
+  <div id="screen-results" class="screen p-6">
+    <div class="flex justify-between items-center mb-5">
+      <h2 class="text-2xl font-bold">Tus recomendaciones</h2>
+      <button id="btn-change" class="text-[#FF3B30] text-sm font-medium">Cambiar</button>
+    </div>
+    <div id="recommendations-list" class="space-y-4"></div>
+
+    <div class="mt-8 flex gap-3">
+      <button id="btn-home" class="flex-1 border border-gray-300 text-gray-700 font-medium py-4 rounded-3xl">Volver al inicio</button>
+      <button id="btn-full-menu" class="flex-1 bg-[#FF3B30] text-white font-medium py-4 rounded-3xl">Ver menú completo</button>
+    </div>
+  </div>
+
+  <!-- PANTALLA 4: MENÚ -->
+  <div id="screen-menu" class="screen">
+    <div class="sticky top-0 bg-white z-50 border-b px-4 py-4 flex items-center gap-3">
+      <button id="btn-back-menu" class="text-2xl">←</button>
+      <h2 class="font-bold text-xl">Menú</h2>
+    </div>
+    <div class="p-4" id="menu-by-category"></div>
+  </div>
+
+  <script>
+    // ==================== SUPABASE (SOLO UNA VEZ) ====================
+    const SUPABASE_URL = 'https://fiiavvgxlyccvcjqwnv.supabase.co';
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZpaWF2dmd4bHljY3ZjanF3bnYiLCJyb2xlIjoiYW5vbiIsImlhdCI6MTc1MDg3NzI3MiwiZXhwIjoyMDY2NDUzMjcyfQ.8vK8vK8vK8vK8vK8vK8vK8vK8vK8vK8vK8vK8vK8';
+
+    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+    let allDishes = [];
+    let allCategories = [];
+
+    async function loadData() {
+      const { data: categories } = await supabase.from('categories').select('*').order('order');
+      const { data: dishes } = await supabase.from('dishes').select('*, categories(name)').eq('is_active', true);
+
+      allCategories = categories || [];
+      allDishes = dishes || [];
+    }
+
+    function renderMenu() {
+      const container = document.getElementById('menu-by-category');
+      container.innerHTML = '';
+
+      allCategories.forEach(cat => {
+        const dishesCat = allDishes.filter(d => d.category_id === cat.id);
+        if (dishesCat.length === 0) return;
+
+        const section = document.createElement('div');
+        section.innerHTML = `<h3 class="font-bold text-xl mb-3 px-1">${cat.name}</h3>`;
+
+        const list = document.createElement('div');
+        list.className = 'space-y-3';
+
+        dishesCat.forEach(dish => {
+          const card = document.createElement('div');
+          card.className = 'bg-white border border-gray-200 rounded-2xl overflow-hidden';
+          card.innerHTML = `
+            ${dish.image_url ? `<img src="${dish.image_url}" class="w-full h-40 object-cover">` : ''}
+            <div class="p-4">
+              <div class="flex justify-between items-start">
+                <h3 class="font-bold text-xl">${dish.name}</h3>
+                <span class="font-bold text-[#FF3B30]">$${dish.price}</span>
+              </div>
+              <p class="text-sm text-gray-600 mt-2">${dish.description || ''}</p>
+            </div>
+          `;
+          list.appendChild(card);
+        });
+
+        section.appendChild(list);
+        container.appendChild(section);
+     
