@@ -49,7 +49,7 @@
     </div>
   </div>
 
-  <!-- PANTALLA 2: PREFERENCIAS IA -->
+  <!-- PANTALLA 2: PREFERENCIAS -->
   <div id="screen-preferences" class="screen hidden p-6">
     <div class="flex items-center gap-3 mb-6">
       <button onclick="showScreen('screen-home')" class="text-2xl">←</button>
@@ -82,7 +82,7 @@
     </div>
   </div>
 
-  <!-- PANTALLA 4: MENÚ COMPLETO -->
+  <!-- PANTALLA 4: MENÚ -->
   <div id="screen-menu" class="screen hidden">
     <div class="sticky top-0 bg-white z-50 border-b px-4 py-4 flex items-center gap-3">
       <button onclick="showScreen('screen-home')" class="text-2xl">←</button>
@@ -92,7 +92,7 @@
   </div>
 
   <script>
-    // ==================== SUPABASE ====================
+    // ==================== SUPABASE (SOLO UNA VEZ) ====================
     const SUPABASE_URL = 'https://fiiavvgxlyccvcjqwnv.supabase.co';
     const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZpaWF2dmd4bHljY3ZjanF3bnYiLCJyb2xlIjoiYW5vbiIsImlhdCI6MTc1MDg3NzI3MiwiZXhwIjoyMDY2NDUzMjcyfQ.8vK8vK8vK8vK8vK8vK8vK8vK8vK8vK8vK8vK8vK8';
 
@@ -103,11 +103,22 @@
 
     // Cargar datos desde Supabase
     async function loadDataFromSupabase() {
-      const { data: categories } = await supabase.from('categories').select('*').order('order');
-      const { data: dishes } = await supabase.from('dishes').select('*, categories(name)').eq('is_active', true);
+      try {
+        const { data: categories } = await supabase
+          .from('categories')
+          .select('*')
+          .order('order', { ascending: true });
 
-      allCategories = categories || [];
-      allDishes = dishes || [];
+        const { data: dishes } = await supabase
+          .from('dishes')
+          .select('*, categories(name)')
+          .eq('is_active', true);
+
+        allCategories = categories || [];
+        allDishes = dishes || [];
+      } catch (error) {
+        console.error('Error cargando datos de Supabase:', error);
+      }
     }
 
     // Renderizar menú por categorías
@@ -147,7 +158,7 @@
       });
     }
 
-    // Preferencias (igual que antes)
+    // Preferencias
     const preferenceOptions = [
       { key: 'sharing', label: 'Para compartir', icon: 'fa-users' },
       { key: 'light', label: 'Algo ligero', icon: 'fa-leaf' },
@@ -160,6 +171,7 @@
     function renderPreferences() {
       const container = document.getElementById('preferences-list');
       container.innerHTML = '';
+
       preferenceOptions.forEach(pref => {
         const div = document.createElement('div');
         div.className = `flex items-center gap-4 p-4 bg-white border border-gray-200 rounded-2xl cursor-pointer`;
@@ -178,7 +190,6 @@
     }
 
     function getRecommendations() {
-      // Lógica simple de filtrado (puedes mejorarla después)
       let filtered = [...allDishes];
 
       if (selected.sharing) filtered = filtered.filter(d => d.good_for_sharing);
@@ -212,7 +223,8 @@
 
     function showScreen(screenId) {
       document.querySelectorAll('.screen').forEach(s => s.classList.add('hidden'));
-      document.getElementById(screenId).classList.remove('hidden');
+      const target = document.getElementById(screenId);
+      if (target) target.classList.remove('hidden');
     }
 
     async function init() {
