@@ -7,10 +7,6 @@
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-  <style>
-    .screen { display: none; }
-    .screen.active { display: block; }
-  </style>
 </head>
 <body class="bg-[#F8F9FA] max-w-md mx-auto">
 
@@ -38,15 +34,13 @@
       </div>
 
       <div class="space-y-4">
-        <button id="btn-recomendaciones"
-                class="w-full bg-[#FF3B30] hover:bg-[#E62E26] text-white font-bold text-xl py-6 rounded-3xl shadow-lg active:scale-[0.985]">
+        <button id="btn-ai" class="w-full bg-[#FF3B30] hover:bg-[#E62E26] text-white font-bold text-xl py-6 rounded-3xl shadow-lg active:scale-[0.985]">
           <i class="fa-solid fa-magic mr-2"></i>
           ¿No sabes qué pedir?<br>
           <span class="text-base font-medium">Recomendaciones con IA</span>
         </button>
 
-        <button id="btn-menu"
-                class="w-full bg-white border border-gray-200 hover:bg-gray-50 text-gray-800 font-semibold text-xl py-6 rounded-3xl active:scale-[0.985]">
+        <button id="btn-menu" class="w-full bg-white border border-gray-200 hover:bg-gray-50 text-gray-800 font-semibold text-xl py-6 rounded-3xl active:scale-[0.985]">
           Explorar el menú completo
         </button>
       </div>
@@ -56,7 +50,7 @@
   <!-- PANTALLA 2: PREFERENCIAS -->
   <div id="screen-preferences" class="screen p-6">
     <div class="flex items-center gap-3 mb-6">
-      <button id="btn-back-preferences" class="text-2xl">←</button>
+      <button id="btn-back-pref" class="text-2xl">←</button>
       <h2 class="text-2xl font-bold">Cuéntanos tus preferencias</h2>
     </div>
 
@@ -67,8 +61,7 @@
       <textarea id="extra-text" rows="2" class="w-full border border-gray-300 rounded-2xl p-4 text-sm" placeholder="Ej: Quiero algo abundante..."></textarea>
     </div>
 
-    <button id="btn-get-recommendations"
-            class="w-full bg-[#FF3B30] text-white font-bold py-5 rounded-3xl text-xl">
+    <button id="btn-recommend" class="w-full bg-[#FF3B30] text-white font-bold py-5 rounded-3xl text-xl">
       Ver mis recomendaciones
     </button>
   </div>
@@ -77,13 +70,13 @@
   <div id="screen-results" class="screen p-6">
     <div class="flex justify-between items-center mb-5">
       <h2 class="text-2xl font-bold">Tus recomendaciones</h2>
-      <button id="btn-change-preferences" class="text-[#FF3B30] text-sm font-medium">Cambiar</button>
+      <button id="btn-change" class="text-[#FF3B30] text-sm font-medium">Cambiar</button>
     </div>
     <div id="recommendations-list" class="space-y-4"></div>
 
     <div class="mt-8 flex gap-3">
-      <button id="btn-back-home" class="flex-1 border border-gray-300 text-gray-700 font-medium py-4 rounded-3xl">Volver al inicio</button>
-      <button id="btn-view-menu" class="flex-1 bg-[#FF3B30] text-white font-medium py-4 rounded-3xl">Ver menú completo</button>
+      <button id="btn-home" class="flex-1 border border-gray-300 text-gray-700 font-medium py-4 rounded-3xl">Volver al inicio</button>
+      <button id="btn-full-menu" class="flex-1 bg-[#FF3B30] text-white font-medium py-4 rounded-3xl">Ver menú completo</button>
     </div>
   </div>
 
@@ -97,7 +90,7 @@
   </div>
 
   <script>
-    // ==================== SUPABASE ====================
+    // ==================== SUPABASE (SOLO UNA DECLARACIÓN) ====================
     const SUPABASE_URL = 'https://fiiavvgxlyccvcjqwnv.supabase.co';
     const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZpaWF2dmd4bHljY3ZjanF3bnYiLCJyb2xlIjoiYW5vbiIsImlhdCI6MTc1MDg3NzI3MiwiZXhwIjoyMDY2NDUzMjcyfQ.8vK8vK8vK8vK8vK8vK8vK8vK8vK8vK8vK8vK8vK8';
 
@@ -105,39 +98,32 @@
 
     let allDishes = [];
     let allCategories = [];
-    let selectedPreferences = {};
 
-    // Cargar datos desde Supabase
+    // Cargar datos
     async function loadData() {
-      try {
-        const { data: categories } = await supabase.from('categories').select('*').order('order');
-        const { data: dishes } = await supabase.from('dishes')
-          .select('*, categories(name)')
-          .eq('is_active', true);
+      const { data: categories } = await supabase.from('categories').select('*').order('order');
+      const { data: dishes } = await supabase.from('dishes').select('*, categories(name)').eq('is_active', true);
 
-        allCategories = categories || [];
-        allDishes = dishes || [];
-      } catch (error) {
-        console.error('Error cargando datos:', error);
-      }
+      allCategories = categories || [];
+      allDishes = dishes || [];
     }
 
-    // Renderizar menú por categorías
+    // Renderizar menú
     function renderMenu() {
       const container = document.getElementById('menu-by-category');
       container.innerHTML = '';
 
-      allCategories.forEach(category => {
-        const dishesInCategory = allDishes.filter(d => d.category_id === category.id);
-        if (dishesInCategory.length === 0) return;
+      allCategories.forEach(cat => {
+        const dishesCat = allDishes.filter(d => d.category_id === cat.id);
+        if (dishesCat.length === 0) return;
 
         const section = document.createElement('div');
-        section.innerHTML = `<h3 class="font-bold text-xl mb-3 px-1">${category.name}</h3>`;
+        section.innerHTML = `<h3 class="font-bold text-xl mb-3 px-1">${cat.name}</h3>`;
 
         const list = document.createElement('div');
         list.className = 'space-y-3';
 
-        dishesInCategory.forEach(dish => {
+        dishesCat.forEach(dish => {
           const card = document.createElement('div');
           card.className = 'bg-white border border-gray-200 rounded-2xl overflow-hidden';
           card.innerHTML = `
@@ -158,42 +144,29 @@
       });
     }
 
-    // Mostrar pantalla
-    function showScreen(screenId) {
+    function showScreen(id) {
       document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
-      document.getElementById(screenId).classList.add('active');
+      document.getElementById(id).classList.add('active');
     }
 
-    // Inicializar todo
-    async function init() {
-      await loadData();
-      renderMenu();
+    function initButtons() {
+      // Pantalla de inicio
+      document.getElementById('btn-ai').onclick = () => showScreen('screen-preferences');
+      document.getElementById('btn-menu').onclick = () => showScreen('screen-menu');
 
-      // Botones de la pantalla de inicio
-      document.getElementById('btn-recomendaciones').addEventListener('click', () => {
-        showScreen('screen-preferences');
-      });
+      // Navegación
+      document.getElementById('btn-back-pref').onclick = () => showScreen('screen-home');
+      document.getElementById('btn-back-menu').onclick = () => showScreen('screen-home');
+      document.getElementById('btn-home').onclick = () => showScreen('screen-home');
+      document.getElementById('btn-full-menu').onclick = () => showScreen('screen-menu');
+      document.getElementById('btn-change').onclick = () => showScreen('screen-preferences');
 
-      document.getElementById('btn-menu').addEventListener('click', () => {
-        showScreen('screen-menu');
-      });
-
-      // Botones de navegación
-      document.getElementById('btn-back-preferences').addEventListener('click', () => showScreen('screen-home'));
-      document.getElementById('btn-back-menu').addEventListener('click', () => showScreen('screen-home'));
-      document.getElementById('btn-back-home').addEventListener('click', () => showScreen('screen-home'));
-      document.getElementById('btn-view-menu').addEventListener('click', () => showScreen('screen-menu'));
-      document.getElementById('btn-change-preferences').addEventListener('click', () => showScreen('screen-preferences'));
-
-      // Botón de recomendaciones
-      document.getElementById('btn-get-recommendations').addEventListener('click', () => {
-        // Lógica simple de recomendaciones (puedes mejorarla después)
+      // Recomendaciones (versión simple por ahora)
+      document.getElementById('btn-recommend').onclick = () => {
         const container = document.getElementById('recommendations-list');
         container.innerHTML = '';
 
-        const filtered = allDishes.slice(0, 3); // Por ahora muestra los primeros 3
-
-        filtered.forEach(dish => {
+        allDishes.slice(0, 3).forEach(dish => {
           const div = document.createElement('div');
           div.className = 'bg-white border border-gray-200 rounded-2xl overflow-hidden';
           div.innerHTML = `
@@ -208,11 +181,15 @@
           `;
           container.appendChild(div);
         });
-
         showScreen('screen-results');
-      });
+      };
+    }
 
-      console.log('Recomendador iniciado correctamente');
+    async function init() {
+      await loadData();
+      renderMenu();
+      initButtons();
+      console.log('%c[Recomendador] Inicializado correctamente', 'color: green');
     }
 
     init();
